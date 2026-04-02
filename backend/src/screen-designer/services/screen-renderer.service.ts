@@ -348,26 +348,16 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
     // Apply Floyd-Steinberg dithering
     const ditheredBuffer = this.applyFloydSteinbergDithering(data, info.width, info.height, threshold);
 
-    // Create 1-bit PNG
-    let sharpInstance = sharp(ditheredBuffer, {
+    // Output as standard 8-bit grayscale PNG (no palette mode)
+    // Firmware 1.7.8 handles display color mapping — palette PNGs cause scrambled display
+    let buffer = await sharp(ditheredBuffer, {
       raw: {
         width: info.width,
         height: info.height,
         channels: 1,
       },
-    });
-
-    // Apply negate for device mode (TRMNL expects inverted colors)
-    if (negate) {
-      sharpInstance = sharpInstance.negate();
-    }
-
-    let buffer = await sharpInstance
-      .png({
-        compressionLevel: 9,
-        palette: true,
-        colours: 2,
-      })
+    })
+      .png({ compressionLevel: 9 })
       .toBuffer();
 
     // If still too large, scale down and re-dither
@@ -399,29 +389,19 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         threshold,
       );
 
-      let scaledSharp = sharp(scaledDithered, {
+      buffer = await sharp(scaledDithered, {
         raw: {
           width: scaledGray.info.width,
           height: scaledGray.info.height,
           channels: 1,
         },
-      });
-
-      if (negate) {
-        scaledSharp = scaledSharp.negate();
-      }
-
-      buffer = await scaledSharp
-        .png({
-          compressionLevel: 9,
-          palette: true,
-          colours: 2,
-        })
+      })
+        .png({ compressionLevel: 9 })
         .toBuffer();
     }
 
     this.logger.debug(
-      `E-ink processing complete: ${buffer.length} bytes, 1-bit, negate=${negate}`,
+      `E-ink processing complete: ${buffer.length} bytes, grayscale dithered`,
     );
 
     return buffer;

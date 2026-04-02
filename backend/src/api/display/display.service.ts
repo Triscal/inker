@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { DefaultScreenService } from './default-screen.service';
 import { ScreenRendererService } from '../../screen-designer/services/screen-renderer.service';
 import { PluginsService } from '../../plugins/plugins.service';
+import { SetupService } from '../setup/setup.service';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -29,6 +30,7 @@ export class DisplayService {
     private defaultScreenService: DefaultScreenService,
     private screenRendererService: ScreenRendererService,
     private pluginsService: PluginsService,
+    private setupService: SetupService,
   ) {}
 
   /**
@@ -51,7 +53,7 @@ export class DisplayService {
     const apiUrl = baseUrl || this.config.get<string>('api.url', 'http://localhost:3002');
     // Find device by MAC address (id header) or API key (access-token header)
     // The Ruby version looks up by MAC address for better compatibility
-    const device = await this.prisma.device.findFirst({
+    let device = await this.prisma.device.findFirst({
       where: {
         OR: [
           { macAddress: macAddressOrApiKey },
@@ -90,24 +92,64 @@ export class DisplayService {
     });
 
     if (!device) {
-      // Return reset signal instead of 404 - tells device to factory reset
-      // Device will clear its API key and return to setup mode
-      // Include ALL expected fields so ArduinoJson on ESP32 doesn't fail parsing
-      this.logger.log(`Device not found for key ${macAddressOrApiKey} - sending factory reset signal`);
-      return {
-        status: 0,
-        image_url: '',
-        filename: '',
-        image_url_timeout: 0,
-        firmware_url: '',
-        update_firmware: false,
-        refresh_rate: 0,
-        reset_firmware: true,
-        special_function: '',
-        temperature_profile: 'default',
-        maximum_compatibility: false,
-        message: 'Device removed from server',
-      };
+      // Auto-provision unknown devices instead of factory resetting
+      // This handles devices connecting to a new/rebuilt server that still have
+      // a stored api_key — they skip /api/setup and call /api/display directly
+      const macRegex = /^([0-9A-Fa-f]{2}[:-]?){5}([0-9A-Fa-f]{2})$/;
+      const isBlocked = macRegex.test(macAddressOrApiKey) && await this.prisma.blockedDevice.findUnique({
+        where: { macAddress: macAddressOrApiKey },
+      });
+      if (macRegex.test(macAddressOrApiKey) && !isBlocked) {
+        this.logger.log(`Auto-provisioning unknown device with MAC ${macAddressOrApiKey}`);
+        try {
+          await this.setupService.provisionDevice(
+            macAddressOrApiKey,
+            firmwareVersion,
+            metrics,
+            baseUrl,
+          );
+          // Re-fetch the newly created device to continue with display logic
+          device = await this.prisma.device.findFirst({
+            where: { macAddress: macAddressOrApiKey },
+            include: {
+              model: true,
+              playlist: {
+                include: {
+                  items: {
+                    include: {
+                      screen: true,
+                      screenDesign: { include: { widgets: { include: { template: true } } } },
+                      pluginInstance: { include: { plugin: true } },
+                    },
+                    orderBy: { order: 'asc' },
+                  },
+                },
+              },
+            },
+          });
+        } catch (err) {
+          this.logger.error(`Auto-provision failed for ${macAddressOrApiKey}: ${err.message}`);
+        }
+      }
+
+      // If still not found after auto-provision attempt, send reset
+      if (!device) {
+        this.logger.log(`Device not found for key ${macAddressOrApiKey} - sending factory reset signal`);
+        return {
+          status: 0,
+          image_url: '',
+          filename: '',
+          image_url_timeout: 0,
+          firmware_url: '',
+          update_firmware: false,
+          refresh_rate: 0,
+          reset_firmware: true,
+          special_function: '',
+          temperature_profile: 'default',
+          maximum_compatibility: false,
+          message: 'Device removed from server',
+        };
+      }
     }
 
     // Check if device has a pending refresh (playlist just changed)
@@ -245,7 +287,8 @@ export class DisplayService {
         : null;
 
     // Detect screen change for ghosting prevention (full refresh on e-ink)
-    const screenChanged = currentScreenId && device.lastScreenId !== currentScreenId;
+    // maximum_compatibility = true forces slower full refresh, preventing artifacts
+    const screenChanged = !!(currentScreenId && device.lastScreenId !== currentScreenId);
     if (screenChanged) {
       this.logger.debug(
         `Screen changed for device ${device.name}: ${device.lastScreenId} -> ${currentScreenId} (will trigger full refresh)`,
@@ -298,7 +341,7 @@ export class DisplayService {
         reset_firmware: false,
         special_function: '',
         temperature_profile: 'default',
-        maximum_compatibility: false,
+        maximum_compatibility: screenChanged,
         refresh_at: nextRefreshAt,
         battery: updatedDevice.battery,
         wifi: updatedDevice.wifi,
@@ -341,7 +384,7 @@ export class DisplayService {
           reset_firmware: false,
           special_function: '',
           temperature_profile: 'default',
-          maximum_compatibility: false,
+          maximum_compatibility: screenChanged,
           refresh_at: nextRefreshAt,
           battery: updatedDevice.battery,
           wifi: updatedDevice.wifi,
@@ -389,7 +432,7 @@ export class DisplayService {
         reset_firmware: false,
         special_function: '',
         temperature_profile: 'default',
-        maximum_compatibility: false,
+        maximum_compatibility: screenChanged,
         refresh_at: nextRefreshAt,
         battery: updatedDevice.battery,
         wifi: updatedDevice.wifi,
@@ -418,7 +461,7 @@ export class DisplayService {
         reset_firmware: false,
         special_function: '',
         temperature_profile: 'default',
-        maximum_compatibility: false,
+        maximum_compatibility: screenChanged,
         refresh_at: nextRefreshAt,
         battery: updatedDevice.battery,
         wifi: updatedDevice.wifi,
@@ -460,19 +503,10 @@ export class DisplayService {
       return null;
     }
 
-    // SINGLE SCREEN: Respect duration for refresh timing
+    // SINGLE SCREEN: No rotation needed — use device refresh rate
+    // Dynamic widgets (clock, countdown) are handled by getRefreshRateForScreen()
     if (items.length === 1) {
-      const itemDuration = items[0].duration || 60;
-
-      // Duration 0 = never refresh (static content, save battery)
-      if (itemDuration === 0) {
-        return { item: items[0], remainingTime: Infinity };
-      }
-
-      // Calculate remaining time in current cycle based on duration
-      const currentSecond = Math.floor(Date.now() / 1000);
-      const remainingTime = itemDuration - (currentSecond % itemDuration);
-      return { item: items[0], remainingTime };
+      return { item: items[0], remainingTime: Infinity };
     }
 
     // Multiple screens: rotation based on current time
@@ -644,6 +678,11 @@ export class DisplayService {
         `Capping refresh rate from ${refreshRate}s to ${remainingTime}s (playlist rotation)`,
       );
       refreshRate = remainingTime;
+    }
+
+    // Floor: never go below 10 seconds to prevent rapid polling from edge cases
+    if (refreshRate < 10) {
+      refreshRate = 10;
     }
 
     return refreshRate;

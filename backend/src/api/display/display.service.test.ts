@@ -40,29 +40,25 @@ describe('DisplayService', () => {
       expect(getCurrentScreen(null)).toBeNull();
     });
 
-    it('should default duration to 60 when duration is 0 (falsy)', () => {
-      // duration 0 is falsy, so `item.duration || 60` defaults to 60
+    it('should return Infinity remainingTime for single item (no rotation needed)', () => {
       const items = [{ id: 1, duration: 0 }];
       const result = getCurrentScreen(items);
       expect(result.item.id).toBe(1);
-      expect(result.remainingTime).toBeGreaterThan(0);
-      expect(result.remainingTime).toBeLessThanOrEqual(60);
+      expect(result.remainingTime).toBe(Infinity);
     });
 
-    it('should return single item with calculated remaining time', () => {
+    it('should return single item with Infinity remainingTime', () => {
       const items = [{ id: 1, duration: 60 }];
       const result = getCurrentScreen(items);
       expect(result.item.id).toBe(1);
-      expect(result.remainingTime).toBeGreaterThan(0);
-      expect(result.remainingTime).toBeLessThanOrEqual(60);
+      expect(result.remainingTime).toBe(Infinity);
     });
 
-    it('should default duration to 60 when not set', () => {
+    it('should return Infinity remainingTime when duration not set', () => {
       const items = [{ id: 1 }];
       const result = getCurrentScreen(items);
       expect(result.item.id).toBe(1);
-      expect(result.remainingTime).toBeGreaterThan(0);
-      expect(result.remainingTime).toBeLessThanOrEqual(60);
+      expect(result.remainingTime).toBe(Infinity);
     });
 
     it('should rotate through multiple screens based on time', () => {
