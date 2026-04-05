@@ -153,7 +153,7 @@ export class WelcomeScreenService {
         processedPath,
         width,
         height,
-        { dithering: colors === 2 },
+        { dithering: colors === 1 },
       );
 
       // Create thumbnail
