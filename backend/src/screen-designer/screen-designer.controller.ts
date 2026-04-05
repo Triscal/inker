@@ -524,6 +524,7 @@ export class ScreenDesignerController {
       const processedBuffer = await sharp(compositeBuffer)
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .grayscale()
+        .toColourspace('b-w')
         .png({ compressionLevel: 9 })
         .toBuffer();
 
