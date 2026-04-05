@@ -40,7 +40,7 @@ export class ImageProcessorService {
 
       // Apply grayscale for monochrome displays
       if (colors === 2) {
-        pipeline = pipeline.grayscale();
+        pipeline = pipeline.grayscale().toColourspace('b-w');
       }
 
       // Output as standard grayscale PNG (not palette-indexed)
@@ -335,7 +335,7 @@ export class ImageProcessorService {
           fit: 'contain',
           background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
-        .grayscale();
+        .grayscale().toColourspace('b-w');
 
       // Apply contrast enhancement if specified
       if (contrast !== 1) {
