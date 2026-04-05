@@ -369,6 +369,7 @@ export class ScreenDesignerController {
       const processedBuffer = await sharp(file.buffer)
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .grayscale()
+        .toColourspace('b-w')
         .png({ compressionLevel: 9 })
         .toBuffer();
 
@@ -636,6 +637,7 @@ export class ScreenDesignerController {
             withoutEnlargement: true,
           })
           .grayscale()
+          .toColourspace('b-w')
           .normalise()
           .raw()
           .toBuffer({ resolveWithObject: true });
@@ -730,6 +732,7 @@ export class ScreenDesignerController {
     // Get raw grayscale pixel data
     const { data, info } = await sharp(inputBuffer)
       .grayscale()
+      .toColourspace('b-w')
       .raw()
       .toBuffer({ resolveWithObject: true });
 
