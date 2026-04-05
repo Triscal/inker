@@ -266,6 +266,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         fit: 'inside',
         withoutEnlargement: true,
       })
+      .toColourspace('b-w')
       .png()
       .toBuffer();
 
@@ -294,6 +295,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       const drawingBuffer = await fs.promises.readFile(drawingPath);
       renderBuffer = await sharp(renderBuffer)
         .composite([{ input: drawingBuffer, top: 0, left: 0 }])
+        .toColourspace('b-w')
         .png()
         .toBuffer();
     }
@@ -357,6 +359,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         channels: 1,
       },
     })
+    .toColourspace('b-w')
       .png({ compressionLevel: 9 })
       .toBuffer();
 
@@ -396,6 +399,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
           channels: 1,
         },
       })
+      .toColourspace('b-w')
         .png({ compressionLevel: 9 })
         .toBuffer();
     }
@@ -1065,7 +1069,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -1095,6 +1099,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
           fit: 'contain',
           background: { r: 0, g: 0, b: 0, alpha: 0 },
         })
+        .toColourspace('b-w')
         .png()
         .toBuffer();
 
@@ -1191,7 +1196,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -1276,7 +1281,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -1299,6 +1304,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         background: fillColor,
       },
     })
+    .toColourspace('b-w')
       .png()
       .toBuffer();
   }
@@ -1392,7 +1398,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -1700,7 +1706,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -1756,6 +1762,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
           fit: fit as keyof FitEnum,
           background: { r: 255, g: 255, b: 255, alpha: 1 }, // White background for e-ink
         })
+        .toColourspace('b-w')
         .png()
         .toBuffer();
     } catch (error) {
@@ -2273,6 +2280,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
           fit: 'contain',
           background: { r: 0, g: 0, b: 0, alpha: 0 },
         })
+        .toColourspace('b-w')
         .png()
         .toBuffer();
     } catch (error) {
@@ -2321,6 +2329,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .grayscale()
         .normalize() // Enhances contrast
+        .toColourspace('b-w')
         .png()
         .toBuffer();
 
@@ -2495,7 +2504,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
       </svg>
     `;
 
-    return sharp(Buffer.from(svg)).png().toBuffer();
+    return sharp(Buffer.from(svg)).toColourspace('b-w').png().toBuffer();
   }
 
   /**
@@ -3292,6 +3301,7 @@ export class ScreenRendererService implements OnModuleDestroy, OnModuleInit {
         .flatten({ background: { r: 255, g: 255, b: 255 } })
         .grayscale()
         .normalize()
+        .toColourspace('b-w')
         .png()
         .toBuffer();
       return `data:image/png;base64,${processedBuffer.toString('base64')}`;

@@ -89,6 +89,7 @@ export class SetupScreenService implements OnModuleInit {
       await sharp(dithered, {
         raw: { width: grayBuffer.info.width, height: grayBuffer.info.height, channels: 1 },
       })
+        .toColourspace('b-w')
         .png({ compressionLevel: 9 })
         .toFile(this.setupScreenPath);
 

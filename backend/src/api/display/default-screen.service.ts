@@ -100,7 +100,6 @@ export class DefaultScreenService implements OnModuleInit {
       const grayBuffer = await sharp(Buffer.from(svg))
         .grayscale()
         .normalise()
-        .toColourspace('b-w')
         .raw()
         .toBuffer({ resolveWithObject: true });
 
@@ -256,6 +255,7 @@ export class DefaultScreenService implements OnModuleInit {
     await sharp(dithered, {
       raw: { width: grayBuffer.info.width, height: grayBuffer.info.height, channels: 1 },
     })
+     .toColourspace('b-w')
       .png({ compressionLevel: 9 })
       .toFile(outputPath);
 
@@ -325,6 +325,7 @@ export class DefaultScreenService implements OnModuleInit {
     await this.ensureDefaultScreenExists();
 
     return sharp(this.defaultScreenPath)
+     .toColourspace('b-w')
       .png()
       .toBuffer();
   }

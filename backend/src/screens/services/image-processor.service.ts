@@ -46,7 +46,7 @@ export class ImageProcessorService {
       // Output as standard grayscale PNG (not palette-indexed)
       // This avoids palette ordering issues that can cause color inversion on some e-ink displays
       // Grayscale PNG uses 0=black, 255=white which is universally interpreted correctly
-      pipeline = pipeline.png({
+      pipeline = pipeline.toColourspace('b-w').png({
         compressionLevel: 9,
       });
 
@@ -112,6 +112,7 @@ export class ImageProcessorService {
       await fs.mkdir(outputDir, { recursive: true });
 
       await sharp(inputPath)
+      .toColourspace('b-w')
         .png({
           compressionLevel: 9,
         })
@@ -171,7 +172,7 @@ export class ImageProcessorService {
           pipeline = pipeline.jpeg({ quality });
           break;
         case '.png':
-          pipeline = pipeline.png({
+          pipeline = pipeline.toColourspace('b-w').png({
             compressionLevel: Math.floor((100 - quality) / 10),
           });
           break;
@@ -179,7 +180,7 @@ export class ImageProcessorService {
           pipeline = pipeline.webp({ quality });
           break;
         default:
-          pipeline = pipeline.png({ compressionLevel: 9 });
+          pipeline = pipeline.toColourspace('b-w').png({ compressionLevel: 9 });
       }
 
       await pipeline.toColourspace('b-w').toFile(outputPath);
@@ -198,7 +199,7 @@ export class ImageProcessorService {
    */
   async toBase64(imagePath: string): Promise<string> {
     try {
-      const buffer = await sharp(imagePath).png().toBuffer();
+      const buffer = await sharp(imagePath).toColourspace('b-w').png().toBuffer();
       return buffer.toString('base64');
     } catch (error) {
       this.logger.error('Failed to convert image to base64:', error);
@@ -293,6 +294,7 @@ export class ImageProcessorService {
           channels: 1,
         },
       })
+      .toColourspace('b-w')
         .png({ compressionLevel: 9 })
         .toFile(outputPath);
 
@@ -345,7 +347,7 @@ export class ImageProcessorService {
       // Normalize for better tonal range
       pipeline = pipeline.normalise().toColourspace('b-w');;
 
-      await pipeline.png({ compressionLevel: 9 }).toFile(tempPath);
+      await pipeline.toColourspace('b-w').png({ compressionLevel: 9 }).toFile(tempPath);
 
       if (dithering) {
         // Apply Floyd-Steinberg dithering
