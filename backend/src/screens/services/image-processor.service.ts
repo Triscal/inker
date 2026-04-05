@@ -40,7 +40,7 @@ export class ImageProcessorService {
 
       // Apply grayscale for monochrome displays
       if (colors === 2) {
-        pipeline = pipeline.grayscale();
+        pipeline = pipeline.grayscale().toColourspace('b-w');
       }
 
       // Output as standard grayscale PNG (not palette-indexed)
