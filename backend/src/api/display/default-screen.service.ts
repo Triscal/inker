@@ -100,6 +100,7 @@ export class DefaultScreenService implements OnModuleInit {
       const grayBuffer = await sharp(Buffer.from(svg))
         .grayscale()
         .normalise()
+        .toColourspace('b-w')
         .raw()
         .toBuffer({ resolveWithObject: true });
 
