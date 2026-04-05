@@ -182,7 +182,7 @@ export class ImageProcessorService {
           pipeline = pipeline.png({ compressionLevel: 9 });
       }
 
-      await pipeline.toFile(outputPath);
+      await pipeline.toColourspace('b-w').toFile(outputPath);
 
       this.logger.debug(`Compressed image saved to: ${outputPath}`);
 
@@ -335,7 +335,7 @@ export class ImageProcessorService {
           fit: 'contain',
           background: { r: 255, g: 255, b: 255, alpha: 1 },
         })
-        .grayscale().toColourspace('b-w');
+        .grayscale();
 
       // Apply contrast enhancement if specified
       if (contrast !== 1) {
@@ -343,7 +343,7 @@ export class ImageProcessorService {
       }
 
       // Normalize for better tonal range
-      pipeline = pipeline.normalise();
+      pipeline = pipeline.normalise().toColourspace('b-w');;
 
       await pipeline.png({ compressionLevel: 9 }).toFile(tempPath);
 
